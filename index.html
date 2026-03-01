@@ -86,31 +86,42 @@
                 <button class="btn btn-primary" onclick="autoGenerateMeals()">✨ AI 자동 생성</button>
             </header>
 
-            <div class="flex-container">
-                <!-- Calendar View -->
-                <div style="flex: 1;">
-                    <table class="calendar-table">
-                        <thead>
-                            <tr>
-                                <th>월</th><th>화</th><th>수</th><th>목</th><th>금</th>
-                            </tr>
-                        </thead>
-                        <tbody id="calendar-body">
-                            <!-- Populated via JS -->
-                        </tbody>
-                    </table>
-                </div>
+            <!-- Monthly Calendar View -->
+            <div class="calendar-header-controls">
+                <button class="btn" onclick="changeMonth(-1)">◀ 이전</button>
+                <h2 id="current-month-label">2023년 10월</h2>
+                <button class="btn" onclick="changeMonth(1)">다음 ▶</button>
+            </div>
 
-                <!-- Menu Sidebar for Drag & Drop -->
-                <aside class="planner-sidebar card">
-                    <div class="card-header">
-                        <span class="card-title">메뉴 검색</span>
+            <div class="monthly-calendar-grid" id="monthly-calendar">
+                <!-- Rendered via JS -->
+            </div>
+
+            <!-- Daily Edit Modal / Panel -->
+            <div id="daily-edit-modal" class="modal-overlay" style="display:none;">
+                <div class="modal-content">
+                    <header class="modal-header">
+                        <h2 id="modal-date-label">날짜 식단 편집</h2>
+                        <button class="btn-close" onclick="closeEditModal()">✖</button>
+                    </header>
+                    <div class="flex-container">
+                        <!-- Daily slots -->
+                        <div class="daily-slots" id="modal-daily-slots">
+                            <!-- Populated via JS -->
+                        </div>
+
+                        <!-- Search Sidebar -->
+                        <aside class="planner-sidebar card">
+                            <div class="card-header">
+                                <span class="card-title">메뉴 검색</span>
+                            </div>
+                            <input type="text" class="search-input" id="menu-search" placeholder="메뉴 이름 검색..." onkeyup="filterMenuSearch()">
+                            <div id="search-results" style="max-height: 400px; overflow-y: auto;">
+                                <!-- Populated via JS -->
+                            </div>
+                        </aside>
                     </div>
-                    <input type="text" class="search-input" id="menu-search" placeholder="메뉴 이름 검색..." onkeyup="filterMenuSearch()">
-                    <div id="search-results" style="max-height: 400px; overflow-y: auto;">
-                        <!-- Populated via JS -->
-                    </div>
-                </aside>
+                </div>
             </div>
         </section>
 
