@@ -304,6 +304,13 @@ body {
 .tag-side { background-color: #fffbeb; color: #92400e; }
 .tag-kimchi { background-color: #fdf4ff; color: #86198f; }
 .tag-dessert { background-color: #faf5ff; color: #6b21a8; }
+.tag-hot { background-color: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; animation: pulse 2s infinite; }
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
 
 .day-summary {
     font-size: 0.8rem;

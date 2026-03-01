@@ -22256,6 +22256,18 @@ const data = {
                         "재료2"
                 ],
                 "isTrendy": true
+        },
+        {
+            "id": "m_trend_1",
+            "name": "마라로제찜닭",
+            "type": "main1",
+            "amount": 250,
+            "calories": 450,
+            "carbs": 25,
+            "protein": 35,
+            "fat": 20,
+            "cost": 3500,
+            "isTrendy": true
         }
 ],
 

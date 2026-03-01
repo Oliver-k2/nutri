@@ -139,9 +139,14 @@ function renderCalendar() {
             if (item) {
                 dailyCost += item.cost || 0;
                 dailyCal += item.calories || 0;
+                let hotTagHtml = '';
+                if (item.name.match(/마라|로제|두쫀쿠|봄동비빔밥|두바이/)) {
+                    hotTagHtml = `<span class="tag tag-hot">HOT 🔥</span>`;
+                }
+
                 cellHtml += `
                     <div class="draggable-meal" onclick="openInlineEdit('${dateStr}', '${slot.key}')">
-                        <span class="tag ${slot.tag}">${slot.label}</span>
+                        <span class="tag ${slot.tag}">${slot.label}</span> ${hotTagHtml}
                         <span class="meal-name">${item.name}</span>
                         <div class="meal-meta">${item.cost.toLocaleString()}원 | ${item.calories}kcal</div>
                     </div>
@@ -212,9 +217,24 @@ function autoGenerateMeals() {
 
     let kimchiCountForWeek = 0;
 
+    // --- Trend Menu Assignment Setup ---
+    // Pick 3 distinct random days in the month for our 3 trend menus
+    let trendDays = [];
+    while (trendDays.length < 3) {
+        let randDay = Math.floor(Math.random() * totalDays) + 1;
+        if (!trendDays.includes(randDay)) trendDays.push(randDay);
+    }
+    const trendMenuSetup = {
+        [trendDays[0]]: { type: 'dessert', name: '두쫀쿠' },
+        [trendDays[1]]: { type: 'rice', name: '봄동비빔밥' },
+        [trendDays[2]]: { type: 'main1', name: '마라로제찜닭' }
+    };
+
     for (let i = 1; i <= totalDays; i++) {
         let d = new Date(year, month, i);
         let dateStr = `${year}-${String(month+1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+
+        let targetTrendMenu = trendMenuSetup[i];
 
         let dayOfWeek = d.getDay();
         if (dayOfWeek === 0) {
@@ -244,6 +264,18 @@ function autoGenerateMeals() {
             let tempCurrentWeekNames = new Set(initialCurrentWeekNames);
 
             const generateSafe = (typeKey, typeCategory) => {
+                // If this is a trend day and the category matches, force the trend menu
+                if (targetTrendMenu && targetTrendMenu.type === typeCategory) {
+                    let trendItem = window.appData.menuDB.find(m => m.name === targetTrendMenu.name);
+                    if (trendItem) {
+                        todayUsedNames.add(trendItem.name);
+                        tempMonthUsageCount[trendItem.name] = (tempMonthUsageCount[trendItem.name] || 0) + 1;
+                        tempCurrentWeekNames.add(trendItem.name);
+                        currentDailyCost += (trendItem.cost || 0);
+                        return trendItem;
+                    }
+                }
+
                 let available = window.appData.menuDB.filter(m => {
                     if (m.type !== typeCategory) return false;
                     if (todayUsedNames.has(m.name)) return false;
