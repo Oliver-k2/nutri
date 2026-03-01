@@ -247,8 +247,13 @@ function autoGenerateMeals() {
                 if (typeCategory === 'kimchi') {
                     // Logic for kimchi frequency (regular kimchi vs special kimchi)
                     let isRegularKimchi = m.name.includes('배추김치') || m.name.includes('포기김치') || m.name.includes('깍두기');
-                    if (isRegularKimchi && kimchiCountForWeek >= kimchiFreq) {
-                        return false;
+
+                    if (kimchiCountForWeek < kimchiFreq) {
+                        // If we haven't met the frequency quota, ONLY allow regular kimchi
+                        if (!isRegularKimchi) return false;
+                    } else {
+                        // Once quota is met, do not allow regular kimchi anymore for the rest of the week
+                        if (isRegularKimchi) return false;
                     }
                 }
 
