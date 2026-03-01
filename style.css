@@ -82,7 +82,7 @@ body {
     gap: 8px;
 }
 .range-inputs input {
-    flex: 1;
+    width: 85px;
     padding: 8px;
     border: 1px solid var(--border);
     border-radius: 6px;

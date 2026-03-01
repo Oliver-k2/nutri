@@ -189,8 +189,13 @@ function autoGenerateMeals() {
                 if (isPref && !m.isTrendy && typeCategory === 'main1') return false;
 
                 if (typeCategory === 'kimchi') {
-                    // Logic for kimchi frequency
-                    return (kimchiCountForWeek < kimchiFreq);
+                    const isBasic = m.name.includes('배추김치') || m.name.includes('포기김치') || m.name.includes('깍두기');
+                    if (kimchiCountForWeek < kimchiFreq) {
+                        return isBasic;
+                    } else {
+                        // After reaching the basic kimchi frequency, pick non-basic kimchi
+                        return !isBasic;
+                    }
                 }
 
                 if ((monthUsageCount[m.name] || 0) >= 2) return false;
