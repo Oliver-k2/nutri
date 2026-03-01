@@ -225,104 +225,134 @@ function autoGenerateMeals() {
         let newMeal = {};
         let todayUsedNames = new Set();
         let currentDailyCost = 0;
+        let attempts = 0;
+        let bestMeal = null;
+        let bestCostDiff = Infinity;
 
-        const generateSafe = (typeKey, typeCategory, targetCostRemaining, isLastItem) => {
-            let available = window.appData.menuDB.filter(m => {
-                if (m.type !== typeCategory) return false;
-                if (todayUsedNames.has(m.name)) return false;
+        // Save state before generating the day so we can rollback on failed attempts
+        const initialKimchiCount = kimchiCountForWeek;
+        const initialMonthUsage = {...monthUsageCount};
+        const initialCurrentWeekNames = new Set(currentWeekNames);
 
-                // Filters based on sidebar checkboxes
-                if (isVeg && m.name.match(/고기|소|돼지|닭|오리|생선|참치|새우|오징어|멸치|햄|소시지|베이컨|돈까스|함박|스팸|우삼겹|가츠|카츠|치킨|삼겹|차돌|육|스테이크|고등어|꽁치|연어|장어|갈치|명태|동태|낙지|문어|쭈꾸미|게|조개|홍합|굴|전복|가리비|맛살|크래미|명란|가자미|미트볼|부대|감자탕|해산물|불고기|장조림|제육|순대|곱창|막창|갈비|떡갈비|동파육|탕수육|깐풍기|유린기|꿔바로우|수육|족발|보쌈|닭갈비|찜닭|백숙|삼계탕|추어탕|해장국|만두|사골|곰탕|설렁탕|갈비탕|도가니탕|꼬리곰탕|육개장|우족탕|삼치|팔보채|동그랑땡|어묵/)) return false;
+        while (attempts < 50) {
+            newMeal = {};
+            todayUsedNames = new Set();
+            currentDailyCost = 0;
+            kimchiCountForWeek = initialKimchiCount;
+            // Temporarily reset state for the attempt
+            let tempMonthUsageCount = {...initialMonthUsage};
+            let tempCurrentWeekNames = new Set(initialCurrentWeekNames);
 
-                if (isHighProtein && typeCategory === 'main1') {
-                    // Prioritize high protein items for main1
-                    if (!m.name.match(/고기|소|돼지|닭|오리|생선|계란|콩|두부|연어|고등어|꽁치|치킨|가츠|스테이크/)) return false;
-                }
+            const generateSafe = (typeKey, typeCategory) => {
+                let available = window.appData.menuDB.filter(m => {
+                    if (m.type !== typeCategory) return false;
+                    if (todayUsedNames.has(m.name)) return false;
 
-                if (isPref && typeCategory === 'main1' && !m.isTrendy) {
-                    // For preference filter, randomly exclude 70% of non-trendy items
-                    if (Math.random() < 0.7) return false;
-                }
+                    // Filters based on sidebar checkboxes
+                    if (isVeg && m.name.match(/고기|소|돼지|닭|오리|생선|참치|새우|오징어|멸치|햄|소시지|베이컨|돈까스|함박|스팸|우삼겹|가츠|카츠|치킨|삼겹|차돌|육|스테이크|고등어|꽁치|연어|장어|갈치|명태|동태|낙지|문어|쭈꾸미|게|조개|홍합|굴|전복|가리비|맛살|크래미|명란|가자미|미트볼|부대|감자탕|해산물|불고기|장조림|제육|순대|곱창|막창|갈비|떡갈비|동파육|탕수육|깐풍기|유린기|꿔바로우|수육|족발|보쌈|닭갈비|찜닭|백숙|삼계탕|추어탕|해장국|만두|사골|곰탕|설렁탕|갈비탕|도가니탕|꼬리곰탕|육개장|우족탕|삼치|팔보채|동그랑땡|어묵/)) return false;
 
-                if (typeCategory === 'kimchi') {
-                    // Logic for kimchi frequency (regular kimchi vs special kimchi)
-                    let isRegularKimchi = m.name.includes('배추김치') || m.name.includes('포기김치') || m.name.includes('깍두기');
-
-                    if (kimchiCountForWeek < kimchiFreq) {
-                        // If we haven't met the frequency quota, ONLY allow regular kimchi
-                        if (!isRegularKimchi) return false;
-                    } else {
-                        // Once quota is met, do not allow regular kimchi anymore for the rest of the week
-                        if (isRegularKimchi) return false;
+                    if (isHighProtein && typeCategory === 'main1') {
+                        if (!m.name.match(/고기|소|돼지|닭|오리|생선|계란|콩|두부|연어|고등어|꽁치|치킨|가츠|스테이크/)) return false;
                     }
-                }
 
-                // Deduplication rules
-                if ((monthUsageCount[m.name] || 0) >= 2 && typeCategory !== 'kimchi') return false;
-                if (previousDayNames.has(m.name) && typeCategory !== 'kimchi') return false;
-                if (currentWeekNames.has(m.name) && typeCategory !== 'kimchi') return false;
-
-                return true;
-            });
-
-            // If filtered out completely, relax rules progressively
-            if (available.length === 0) {
-                 available = window.appData.menuDB.filter(m => m.type === typeCategory && !todayUsedNames.has(m.name));
-            }
-
-            if (available.length > 0) {
-                // Try to find an item that fits the daily cost budget reasonably.
-                let candidates = available;
-
-                // If it's the last few items (e.g. dessert or kimchi) and we have a target cost remaining,
-                // try to pick something that brings the total cost closer to the target maxCost.
-                // We want: currentDailyCost + chosen.cost <= maxCost (and ideally >= minCost when finished)
-                if (maxCost > 0) {
-                    let costFiltered = available.filter(m => (currentDailyCost + m.cost) <= maxCost + 500); // Allow slight overflow
-                    if (costFiltered.length > 0) {
-                        candidates = costFiltered;
+                    if (isPref && typeCategory === 'main1' && !m.isTrendy) {
+                        if (Math.random() < 0.7) return false;
                     }
+
+                    if (typeCategory === 'kimchi') {
+                        let isRegularKimchi = m.name.includes('배추김치') || m.name.includes('포기김치') || m.name.includes('깍두기');
+
+                        if (kimchiCountForWeek < kimchiFreq) {
+                            if (!isRegularKimchi) return false;
+                        } else {
+                            if (isRegularKimchi) return false;
+                        }
+                    }
+
+                    // Deduplication rules
+                    if ((tempMonthUsageCount[m.name] || 0) >= 2 && typeCategory !== 'kimchi') return false;
+                    if (previousDayNames.has(m.name) && typeCategory !== 'kimchi') return false;
+                    if (tempCurrentWeekNames.has(m.name) && typeCategory !== 'kimchi') return false;
+
+                    return true;
+                });
+
+                // Relax rules if needed
+                if (available.length === 0) {
+                     available = window.appData.menuDB.filter(m => m.type === typeCategory && !todayUsedNames.has(m.name));
                 }
 
-                let chosen = candidates[Math.floor(Math.random() * candidates.length)];
+                if (available.length > 0) {
+                    let candidates = available;
 
-                todayUsedNames.add(chosen.name);
-                monthUsageCount[chosen.name] = (monthUsageCount[chosen.name] || 0) + 1;
-                currentWeekNames.add(chosen.name);
+                    // Simple random choice
+                    let chosen = candidates[Math.floor(Math.random() * candidates.length)];
 
-                let isRegularKimchi = chosen.name.includes('배추김치') || chosen.name.includes('포기김치') || chosen.name.includes('깍두기');
-                if (typeCategory === 'kimchi' && isRegularKimchi) {
-                    kimchiCountForWeek++;
+                    todayUsedNames.add(chosen.name);
+                    tempMonthUsageCount[chosen.name] = (tempMonthUsageCount[chosen.name] || 0) + 1;
+                    tempCurrentWeekNames.add(chosen.name);
+
+                    let isRegularKimchi = chosen.name.includes('배추김치') || chosen.name.includes('포기김치') || chosen.name.includes('깍두기');
+                    if (typeCategory === 'kimchi' && isRegularKimchi) {
+                        kimchiCountForWeek++;
+                    }
+
+                    currentDailyCost += (chosen.cost || 0);
+
+                    return chosen;
                 }
+                return null;
+            };
 
-                currentDailyCost += (chosen.cost || 0);
+            newMeal.main1 = generateSafe('main1', 'main1');
+            newMeal.rice = generateSafe('rice', 'rice');
+            newMeal.soup = generateSafe('soup', 'soup');
+            newMeal.side2_1 = generateSafe('side2_1', 'side2');
+            newMeal.side2_2 = generateSafe('side2_2', 'side2');
+            newMeal.kimchi = generateSafe('kimchi', 'kimchi');
+            newMeal.dessert = generateSafe('dessert', 'dessert');
 
-                return chosen;
-            }
-            return null;
-        };
+            // Check if within cost bounds
+            if (currentDailyCost >= minCost && currentDailyCost <= maxCost) {
+                // Success! Commit state changes
+                Object.assign(monthUsageCount, tempMonthUsageCount);
+                tempCurrentWeekNames.forEach(n => currentWeekNames.add(n));
+                bestMeal = newMeal;
+                break;
+            } else {
+                // Keep track of the closest match in case we fail 50 times
+                let diff = 0;
+                if (currentDailyCost < minCost) diff = minCost - currentDailyCost;
+                if (currentDailyCost > maxCost) diff = currentDailyCost - maxCost;
 
-        // Generate in order of impact on cost (Main -> Rice -> Soup -> Sides -> Kimchi -> Dessert)
-        newMeal.main1 = generateSafe('main1', 'main1', 0, false);
-        newMeal.rice = generateSafe('rice', 'rice', 0, false);
-        newMeal.soup = generateSafe('soup', 'soup', 0, false);
-        newMeal.side2_1 = generateSafe('side2_1', 'side2', 0, false);
-        newMeal.side2_2 = generateSafe('side2_2', 'side2', 0, false);
-        newMeal.kimchi = generateSafe('kimchi', 'kimchi', 0, false);
-        newMeal.dessert = generateSafe('dessert', 'dessert', maxCost - currentDailyCost, true);
-
-        // Final cost check & adjustment if severely under minCost
-        if (currentDailyCost < minCost) {
-            // Swap dessert to something more expensive
-            let expensiveDesserts = window.appData.menuDB.filter(m => m.type === 'dessert' && m.cost > (newMeal.dessert ? newMeal.dessert.cost : 0));
-            if (expensiveDesserts.length > 0) {
-                expensiveDesserts.sort((a,b) => b.cost - a.cost);
-                newMeal.dessert = expensiveDesserts[0];
-                currentDailyCost = currentDailyCost - (newMeal.dessert ? newMeal.dessert.cost : 0) + expensiveDesserts[0].cost;
+                if (diff < bestCostDiff) {
+                    bestCostDiff = diff;
+                    bestMeal = newMeal;
+                }
+                attempts++;
             }
         }
 
-        window.appData.mealPlans[dateStr] = newMeal;
+        // If we exhausted attempts, use the closest match and update global trackers accordingly
+        if (attempts >= 50 && bestMeal) {
+            currentDailyCost = 0;
+            kimchiCountForWeek = initialKimchiCount; // Re-calculate based on bestMeal
+            Object.values(bestMeal).forEach(m => {
+                if (m) {
+                    currentDailyCost += m.cost;
+                    monthUsageCount[m.name] = (monthUsageCount[m.name] || 0) + 1;
+                    currentWeekNames.add(m.name);
+                    let isRegularKimchi = m.name.includes('배추김치') || m.name.includes('포기김치') || m.name.includes('깍두기');
+                    if (m.type === 'kimchi' && isRegularKimchi) {
+                        kimchiCountForWeek++;
+                    }
+                }
+            });
+            todayUsedNames = new Set(Object.values(bestMeal).filter(m => m).map(m => m.name));
+            newMeal = bestMeal;
+        }
+
+        window.appData.mealPlans[dateStr] = newMeal || {};
         previousDayNames = new Set(todayUsedNames);
     }
 
