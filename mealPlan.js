@@ -2,7 +2,41 @@
 
 let currentMonthDate = new Date();
 
+// -----------------------------------------------------
+// Settings Persistence (localStorage)
+// -----------------------------------------------------
+function saveSettings() {
+    const settings = {
+        costMin: document.getElementById('setting-cost-min').value,
+        costMax: document.getElementById('setting-cost-max').value,
+        kimchiFreq: document.getElementById('setting-kimchi-freq').value,
+        isVeg: document.getElementById('setting-veg').checked,
+        isProtein: document.getElementById('setting-protein').checked,
+        isPref: document.getElementById('setting-pref').checked
+    };
+    localStorage.setItem('dietitianOsSettings', JSON.stringify(settings));
+    alert('✨ 설정이 저장되었습니다. 다음에 접속할 때도 유지됩니다.');
+}
+
+function loadSettings() {
+    const saved = localStorage.getItem('dietitianOsSettings');
+    if (saved) {
+        try {
+            const settings = JSON.parse(saved);
+            if (settings.costMin !== undefined) document.getElementById('setting-cost-min').value = settings.costMin;
+            if (settings.costMax !== undefined) document.getElementById('setting-cost-max').value = settings.costMax;
+            if (settings.kimchiFreq !== undefined) document.getElementById('setting-kimchi-freq').value = settings.kimchiFreq;
+            if (settings.isVeg !== undefined) document.getElementById('setting-veg').checked = settings.isVeg;
+            if (settings.isProtein !== undefined) document.getElementById('setting-protein').checked = settings.isProtein;
+            if (settings.isPref !== undefined) document.getElementById('setting-pref').checked = settings.isPref;
+        } catch (e) {
+            console.error('Failed to parse settings from localStorage', e);
+        }
+    }
+}
+
 function initApp() {
+    loadSettings();
     renderCalendar();
     updateMetrics();
 }
