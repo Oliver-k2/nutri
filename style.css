@@ -1,16 +1,17 @@
-/* CSS Variables for Healthcare Theme */
+/* CSS Variables for Personal Assistant Theme (Pink/Coral) */
 :root {
-    --primary-green: #2ecc71;
-    --dark-green: #27ae60;
-    --light-green: #e9f7ef;
+    --primary-green: #ff7675; /* Retained variable name but changed to Pink/Coral */
+    --dark-green: #d63031;    /* Deep Red/Coral */
+    --light-green: #ffeaa7;   /* Soft warm background or #ffdfdf */
+    --bg-pink: #fff0f5;       /* Lavender blush */
     --white: #ffffff;
-    --bg-gray: #f4f6f9;
-    --text-dark: #2c3e50;
-    --text-gray: #7f8c8d;
-    --border-color: #e0e6ed;
-    --danger: #e74c3c;
-    --warning: #f1c40f;
-    --shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    --bg-gray: #f8f9fa;
+    --text-dark: #2d3436;
+    --text-gray: #636e72;
+    --border-color: #dfe6e9;
+    --danger: #ff4757;
+    --warning: #ffa502;
+    --shadow: 0 4px 15px rgba(255, 118, 117, 0.1);
 }
 
 * {
@@ -21,7 +22,7 @@
 }
 
 body {
-    background-color: var(--bg-gray);
+    background-color: var(--bg-pink);
     color: var(--text-dark);
     display: flex;
     min-height: 100vh;
@@ -38,13 +39,14 @@ body {
 }
 
 .brand {
-    font-size: 1.2rem;
+    font-size: 1.3rem;
     font-weight: 700;
-    color: var(--dark-green);
+    color: var(--primary-green);
     margin-bottom: 30px;
     display: flex;
     align-items: center;
     gap: 10px;
+    letter-spacing: -0.5px;
 }
 
 .nav-menu {
@@ -62,8 +64,9 @@ body {
 }
 
 .nav-item:hover, .nav-item.active {
-    background-color: var(--light-green);
+    background-color: #ffeaa7; /* Soft yellow highlight */
     color: var(--dark-green);
+    transform: translateX(5px);
 }
 
 /* Main Content Area */
@@ -236,8 +239,8 @@ h1 {
 }
 
 .calendar-table th {
-    background-color: var(--light-green);
-    color: var(--dark-green);
+    background-color: #fad390; /* Warm tone for calendar */
+    color: var(--text-dark);
     font-weight: 600;
 }
 
@@ -328,4 +331,36 @@ h1 {
     left: 50%;
     transform: translateX(-50%);
     font-size: 0.8rem;
+}
+
+/* Additions for Trendy Badges & Inputs */
+.badge-trendy {
+    background-color: #ff4757;
+    color: white;
+    font-size: 0.65rem;
+    padding: 2px 5px;
+    border-radius: 10px;
+    margin-left: 5px;
+    vertical-align: middle;
+}
+
+.cost-input {
+    width: 65px;
+    padding: 2px 4px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    text-align: right;
+    font-size: 0.8rem;
+    color: var(--dark-green);
+    font-weight: bold;
+}
+.cost-input:focus {
+    outline: none;
+    border-color: var(--primary-green);
+}
+
+.amount-info {
+    font-size: 0.75rem;
+    color: var(--text-gray);
+    margin-top: 3px;
 }

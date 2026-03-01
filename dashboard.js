@@ -27,7 +27,7 @@ function renderTodayMenu(date) {
         return;
     }
 
-    const labels = { rice: '밥', soup: '국', main1: '메인', side2_1: '보조1', side2_2: '보조2', kimchi: '김치', other: '기타' };
+    const labels = { rice: '밥', soup: '국', main1: '메인', side2_1: '보조1', side2_2: '보조2', kimchi: '김치', dessert: '후식' };
     let totals = { cal: 0, carb: 0, prot: 0, fat: 0 };
 
     for (let key in meal) {
@@ -38,10 +38,15 @@ function renderTodayMenu(date) {
             totals.prot += item.protein;
             totals.fat += item.fat;
 
+            let trendBadge = item.isTrendy ? '<span class="badge-trendy">🔥유행</span>' : '';
+
             listEl.innerHTML += `
                 <li class="menu-item">
                     <span class="menu-type">${labels[key]}</span>
-                    <span class="menu-name">${item.name}</span>
+                    <span class="menu-name">
+                        ${item.name} ${trendBadge}
+                        <div class="amount-info">${item.amount}g | ${item.calories}kcal</div>
+                    </span>
                 </li>
             `;
         }
