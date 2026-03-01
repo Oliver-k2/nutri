@@ -3,80 +3,158 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI 메뉴 제작 도우미</title>
+    <title>AI 메뉴 제작 도우미 - Professional</title>
     <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
-    <!-- SheetJS for Excel/CSV parsing and export -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 </head>
 <body>
+    <div class="app-container">
+        <!-- Left Sidebar: Settings -->
+        <aside class="sidebar-settings">
+            <div class="brand">
+                <span class="icon">✨</span> AI 식단 비서
+            </div>
 
-    <!-- Main Content -->
-    <main class="main-content full-width">
-        <!-- ==============================================
-             Smart Meal Planner (딸깍 식단 작성)
-             ============================================== -->
-        <section id="mealPlan" class="view-section">
-            <header class="app-header">
-                <div class="header-title">
+            <div class="settings-card">
+                <h3>지능형 조건 설정</h3>
+
+                <div class="setting-group">
+                    <label>1일 목표 단가 (원)</label>
+                    <div class="range-inputs">
+                        <input type="number" id="setting-cost-min" value="6000" placeholder="최소">
+                        <span>~</span>
+                        <input type="number" id="setting-cost-max" value="8000" placeholder="최대">
+                    </div>
+                </div>
+
+                <div class="setting-group">
+                    <label>주간 김치 제공 횟수</label>
+                    <div class="flex-center" style="display:flex; align-items:center; gap: 8px;">
+                        <input type="number" id="setting-kimchi-freq" value="5" min="0" max="7" class="form-control" style="width: 70px;">
+                        <span>회 / 주</span>
+                    </div>
+                    <small class="text-muted">* 배추김치/깍두기 기준</small>
+                </div>
+
+                <div class="setting-group">
+                    <label>영양사 맞춤 필터</label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="setting-veg"> 채식 위주 식단 (비건)
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="setting-protein"> 고단백 식단 (근골격 강화)
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="setting-pref"> 선호도 높은 메뉴 우선
+                    </label>
+                </div>
+            </div>
+
+            <div class="sidebar-footer">
+                <p class="text-muted text-sm">Dietitian OS v2.0<br>Professional Edition</p>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="top-header">
+                <div>
                     <h1>딸깍 식단 작성</h1>
-                    <span class="subtitle">AI 메뉴 제작 도우미</span>
+                    <p class="text-muted">마우스 클릭만으로 완벽한 한 달 식단을 완성하세요.</p>
                 </div>
                 <div class="header-actions">
                     <button class="btn btn-outline" onclick="downloadTemplate()">📄 양식 다운로드</button>
                     <label class="btn btn-outline" for="csv-upload" style="cursor: pointer; margin-bottom: 0;">
-                        📁 CSV 메뉴 업로드
+                        📁 CSV 업로드
                     </label>
                     <input type="file" id="csv-upload" accept=".csv, .xlsx" style="display: none;" onchange="handleFileUpload(event)">
-
                     <button class="btn btn-outline" onclick="downloadMealPlan()">💾 식단 다운로드</button>
                     <button class="btn btn-primary" onclick="autoGenerateMeals()">✨ AI 자동 생성</button>
                 </div>
             </header>
 
-            <!-- Monthly Calendar View -->
-            <div class="calendar-header-controls">
-                <button class="btn" onclick="changeMonth(-1)">◀ 이전</button>
-                <h2 id="current-month-label">2023년 10월</h2>
-                <button class="btn" onclick="changeMonth(1)">다음 ▶</button>
-            </div>
-
-            <div class="monthly-calendar-grid" id="monthly-calendar">
-                <!-- Rendered via JS -->
-            </div>
-
-            <!-- Daily Edit Modal / Panel -->
-            <div id="daily-edit-modal" class="modal-overlay" style="display:none;">
-                <div class="modal-content">
-                    <header class="modal-header">
-                        <h2 id="modal-date-label">날짜 식단 편집</h2>
-                        <button class="btn-close" onclick="closeEditModal()">✖</button>
-                    </header>
-                    <div class="flex-container">
-                        <!-- Daily slots -->
-                        <div class="daily-slots" id="modal-daily-slots">
-                            <!-- Populated via JS -->
-                        </div>
-
-                        <!-- Search Sidebar -->
-                        <aside class="planner-sidebar card">
-                            <div class="card-header">
-                                <span class="card-title">메뉴 검색</span>
-                            </div>
-                            <input type="text" class="search-input" id="menu-search" placeholder="메뉴 이름 검색..." onkeyup="filterMenuSearch()">
-                            <div id="search-results" style="max-height: 400px; overflow-y: auto;">
-                                <!-- Populated via JS -->
-                            </div>
-                        </aside>
+            <!-- Metrics Summary -->
+            <div class="metrics-container">
+                <div class="metric-card">
+                    <div class="metric-icon" style="background-color: #e0e7ff; color: #4338ca;">💰</div>
+                    <div class="metric-info">
+                        <span class="metric-label">월간 총 식재료비 예측</span>
+                        <h2 id="summary-total-cost">0원</h2>
+                    </div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-icon" style="background-color: #dcfce7; color: #15803d;">📊</div>
+                    <div class="metric-info">
+                        <span class="metric-label">1일 평균 단가</span>
+                        <h2 id="summary-avg-cost">0원</h2>
+                    </div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-icon" style="background-color: #fee2e2; color: #b91c1c;">🔥</div>
+                    <div class="metric-info">
+                        <span class="metric-label">1일 평균 칼로리</span>
+                        <h2 id="summary-avg-cal">0 kcal</h2>
                     </div>
                 </div>
             </div>
-        </section>
 
+            <!-- Calendar Section -->
+            <div class="calendar-section card">
+                <div class="calendar-header-controls">
+                    <button class="btn btn-icon" onclick="changeMonth(-1)">◀</button>
+                    <h2 id="current-month-label">2023년 10월</h2>
+                    <button class="btn btn-icon" onclick="changeMonth(1)">▶</button>
+                </div>
 
-    </main>
+                <div class="monthly-calendar-grid" id="monthly-calendar">
+                    <!-- Rendered via JS -->
+                </div>
+            </div>
+        </main>
 
-    <!-- Scripts -->
+        <!-- Interactive Inline Edit Modal -->
+        <div id="inline-edit-modal" class="modal-overlay" style="display:none;">
+            <div class="modal-content small-modal">
+                <div class="modal-header">
+                    <h3 id="inline-edit-title">메뉴 수정</h3>
+                    <button class="btn-close" onclick="closeInlineEdit()">✖</button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="edit-date">
+                    <input type="hidden" id="edit-slot-key">
+
+                    <div class="form-group" style="position:relative;">
+                        <label>메뉴 이름 (검색하여 선택)</label>
+                        <input type="text" id="edit-menu-name" class="form-control" placeholder="메뉴 이름 입력..." onkeyup="searchReplaceMenu()" autocomplete="off">
+                        <div id="edit-menu-dropdown" class="dropdown-list" style="display:none;"></div>
+                    </div>
+                    <div class="form-row" style="display:flex; gap:10px;">
+                        <div class="form-group" style="flex:1;">
+                            <label>단가 (원)</label>
+                            <input type="number" id="edit-menu-cost" class="form-control" min="0">
+                        </div>
+                        <div class="form-group" style="flex:1;">
+                            <label>칼로리 (kcal)</label>
+                            <input type="number" id="edit-menu-cal" class="form-control" min="0">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>제공량 (g)</label>
+                        <input type="number" id="edit-menu-amount" class="form-control" min="0">
+                    </div>
+                </div>
+                <div class="modal-footer" style="display:flex; justify-content:space-between; margin-top: 20px;">
+                    <button class="btn btn-outline text-danger" onclick="removeMenuFromSlot()" style="border-color: #f87171; color: #dc2626;">삭제</button>
+                    <div>
+                        <button class="btn btn-outline" onclick="closeInlineEdit()">취소</button>
+                        <button class="btn btn-primary" onclick="saveInlineEdit()">적용</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="data.js"></script>
     <script src="mealPlan.js"></script>
     <script src="excel.js"></script>

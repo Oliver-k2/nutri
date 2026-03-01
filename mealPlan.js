@@ -1,351 +1,226 @@
-// Meal Planner Logic
+// Data source assumed available as window.appData
 
 let currentMonthDate = new Date();
 
-document.addEventListener("DOMContentLoaded", () => {
-    // Initialization
-});
-
-function changeMonth(delta) {
-    currentMonthDate.setMonth(currentMonthDate.getMonth() + delta);
+function initApp() {
     renderCalendar();
+    updateMetrics();
+}
+
+function changeMonth(offset) {
+    currentMonthDate.setMonth(currentMonthDate.getMonth() + offset);
+    renderCalendar();
+    updateMetrics();
+}
+
+function updateMetrics() {
+    let year = currentMonthDate.getFullYear();
+    let month = currentMonthDate.getMonth();
+    let totalDays = new Date(year, month + 1, 0).getDate();
+
+    let totalCost = 0;
+    let totalCal = 0;
+    let daysWithMeals = 0;
+
+    for (let i = 1; i <= totalDays; i++) {
+        let dateStr = `${year}-${String(month+1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+        let meal = window.appData.mealPlans[dateStr];
+        if (meal) {
+            let dailyCost = 0;
+            let dailyCal = 0;
+            let hasItems = false;
+            Object.values(meal).forEach(item => {
+                if (item && item.cost) { dailyCost += item.cost; hasItems = true; }
+                if (item && item.calories) dailyCal += item.calories;
+            });
+            if (hasItems) {
+                totalCost += dailyCost;
+                totalCal += dailyCal;
+                daysWithMeals++;
+            }
+        }
+    }
+
+    let avgCost = daysWithMeals > 0 ? Math.round(totalCost / daysWithMeals) : 0;
+    let avgCal = daysWithMeals > 0 ? Math.round(totalCal / daysWithMeals) : 0;
+
+    document.getElementById('summary-total-cost').innerText = `${totalCost.toLocaleString()}원`;
+    document.getElementById('summary-avg-cost').innerText = `${avgCost.toLocaleString()}원`;
+    document.getElementById('summary-avg-cal').innerText = `${avgCal.toLocaleString()} kcal`;
 }
 
 function renderCalendar() {
-    const calendarGrid = document.getElementById('monthly-calendar');
-    const monthLabel = document.getElementById('current-month-label');
-
     let year = currentMonthDate.getFullYear();
     let month = currentMonthDate.getMonth();
 
-    monthLabel.innerText = `${year}년 ${month + 1}월`;
+    document.getElementById('current-month-label').innerText = `${year}년 ${month + 1}월`;
 
-    calendarGrid.innerHTML = '';
+    let firstDay = new Date(year, month, 1).getDay();
+    let daysInMonth = new Date(year, month + 1, 0).getDate();
+    let daysInPrevMonth = new Date(year, month, 0).getDate();
 
-    // Add Headers
+    const calendar = document.getElementById('monthly-calendar');
+    calendar.innerHTML = '';
+
     const daysOfWeek = ['일', '월', '화', '수', '목', '금', '토'];
-    const dayClasses = ['sun', '', '', '', '', '', 'sat'];
-
-    daysOfWeek.forEach((day, index) => {
-        calendarGrid.innerHTML += `<div class="calendar-day-header ${dayClasses[index]}">${day}</div>`;
+    daysOfWeek.forEach((d, idx) => {
+        let cls = 'calendar-day-header';
+        if(idx === 0) cls += ' sun';
+        if(idx === 6) cls += ' sat';
+        calendar.innerHTML += `<div class="${cls}">${d}</div>`;
     });
 
-    // Calculate days
-    let firstDay = new Date(year, month, 1);
-    let lastDay = new Date(year, month + 1, 0);
-    let startPadding = firstDay.getDay();
-    let totalDays = lastDay.getDate();
-
-    // Previous month padding
-    let prevLastDay = new Date(year, month, 0).getDate();
-    for(let i = startPadding - 1; i >= 0; i--) {
-        calendarGrid.innerHTML += `<div class="day-cell other-month"><div class="date-header">${prevLastDay - i}</div></div>`;
+    let html = '';
+    for (let i = 0; i < firstDay; i++) {
+        html += `<div class="day-cell other-month"><div class="date-header">${daysInPrevMonth - firstDay + i + 1}</div></div>`;
     }
 
-    // Current month days
     let todayStr = new Date().toISOString().split('T')[0];
 
-    for(let i = 1; i <= totalDays; i++) {
-        let currentDateStr = `${year}-${String(month+1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
-        let isTodayClass = (currentDateStr === todayStr) ? 'today' : '';
+    for (let i = 1; i <= daysInMonth; i++) {
+        let dateStr = `${year}-${String(month+1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+        let isToday = (dateStr === todayStr) ? 'today' : '';
 
-        calendarGrid.innerHTML += `
-            <div class="day-cell ${isTodayClass}" id="cell-${currentDateStr}" onclick="openEditModal('${currentDateStr}')">
-                <div class="date-header">${i}</div>
-                <div id="meal-content-${currentDateStr}">
-                    ${generateMealHTMLMini(currentDateStr)}
-                </div>
-            </div>
-        `;
-    }
+        let cellHtml = `<div class="day-cell ${isToday}">
+                            <div class="date-header">${i}</div>`;
 
-    // Next month padding
-    let remainingCells = 42 - (startPadding + totalDays); // Always keep 6 rows layout
-    if (remainingCells >= 7 && (startPadding + totalDays) <= 35) remainingCells -= 7; // Adjust to 5 rows if enough
-    for(let i = 1; i <= remainingCells; i++) {
-        calendarGrid.innerHTML += `<div class="day-cell other-month"><div class="date-header">${i}</div></div>`;
-    }
-}
+        let dailyCost = 0;
+        let dailyCal = 0;
 
-function generateMealHTMLMini(date) {
-    let meal = window.appData.mealPlans[date];
-    if(!meal || Object.keys(meal).length === 0) return '<div class="text-gray" style="font-size:14px; margin-top:5px;">등록 안됨</div>';
+        let meal = window.appData.mealPlans[dateStr] || {};
+        const slots = [
+            { key: 'rice', label: '밥', tag: 'tag-rice' },
+            { key: 'soup', label: '국', tag: 'tag-soup' },
+            { key: 'main1', label: '메인', tag: 'tag-main' },
+            { key: 'side2_1', label: '보조', tag: 'tag-side' },
+            { key: 'side2_2', label: '보조', tag: 'tag-side' },
+            { key: 'kimchi', label: '김치', tag: 'tag-kimchi' },
+            { key: 'dessert', label: '후식', tag: 'tag-dessert' }
+        ];
 
-    let html = '<div style="display: flex; flex-direction: column; gap: 3px;">';
-    const keys = ['rice', 'soup', 'main1', 'side2_1', 'side2_2', 'kimchi', 'dessert']; // 7첩 반상 생략 없음
-    const labels = { rice: '밥', soup: '국', main1: '메인', side2_1: '보조', side2_2: '보조', kimchi: '김치', dessert: '후식' };
-    const classes = { rice: 'tag-rice', soup: 'tag-soup', main1: 'tag-main', side2_1: 'tag-side', side2_2: 'tag-side', kimchi: 'tag-kimchi', dessert: 'tag-dessert' };
-
-    keys.forEach(key => {
-        if(meal[key]) {
-            let item = meal[key];
-            let trendBadge = item.isTrendy ? '<span class="badge-trendy">🔥유행</span>' : '';
-            html += `<div style="font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
-                        <span class="category-tag ${classes[key]}">${labels[key]}</span>${item.name} ${trendBadge}
-                     </div>`;
-        }
-    });
-
-    html += '</div>';
-    html += `<div class="day-summary" style="font-size:12px; margin-top:5px; border-top:1px solid #eee; padding-top:5px; color:var(--text-gray);">${generateSummaryHTML(date)}</div>`;
-
-    return html;
-}
-
-function generateSummaryHTML(date) {
-    let meal = window.appData.mealPlans[date];
-    if(!meal) return '';
-
-    let totals = { cost: 0, cal: 0 };
-    for(let key in meal) {
-        if(meal[key]) {
-            totals.cost += meal[key].cost;
-            totals.cal += meal[key].calories;
-        }
-    }
-    return `단가: ${totals.cost.toLocaleString()}원<br>열량: ${totals.cal}kcal`;
-}
-
-
-// Search functionality & Cost editing
-function updateMenuCost(id, inputElement) {
-    let newCost = parseInt(inputElement.value);
-    if(isNaN(newCost) || newCost < 0) return;
-
-    let menu = window.appData.menuDB.find(m => m.id === id);
-    if(menu) {
-        menu.cost = newCost;
-        // Re-render calendar summaries since costs updated
-        renderCalendar();
-    }
-}
-
-// Daily Edit Modal Logic
-let currentEditDate = null;
-
-function openEditModal(dateStr) {
-    currentEditDate = dateStr;
-    document.getElementById('daily-edit-modal').style.display = 'flex';
-    document.getElementById('modal-date-label').innerText = `${dateStr} 식단 편집`;
-    renderDailySlots();
-}
-
-function closeEditModal() {
-    document.getElementById('daily-edit-modal').style.display = 'none';
-    currentEditDate = null;
-    renderCalendar();
-}
-
-function renderDailySlots() {
-    if(!currentEditDate) return;
-
-    let meal = window.appData.mealPlans[currentEditDate] || {};
-    const slots = document.getElementById('modal-daily-slots');
-    slots.innerHTML = '';
-
-    const keys = ['rice', 'soup', 'main1', 'side2_1', 'side2_2', 'kimchi', 'dessert'];
-    const labels = { rice: '밥', soup: '국', main1: '메인', side2_1: '보조1', side2_2: '보조2', kimchi: '김치', dessert: '후식' };
-
-    keys.forEach(key => {
-        let content = '';
-        if(meal[key]) {
-            let item = meal[key];
-            let trendBadge = item.isTrendy ? '<span class="badge-trendy">🔥</span>' : '';
-            content = `
-                <div class="draggable-meal" draggable="true" ondragstart="drag(event, '${currentEditDate}', '${key}', '${item.id}')">
-                    <div style="flex:1;">
-                        <b>${item.name}</b> ${trendBadge} <br>
-                        <span style="font-size:0.75rem; color:var(--text-gray)">(${item.amount}g | ${item.calories}kcal) - ${item.cost}원</span>
+        // Always render all 7 empty slots if empty, or populated slots.
+        // This ensures the empty calendar condition is met.
+        slots.forEach(slot => {
+            let item = meal[slot.key];
+            if (item) {
+                dailyCost += item.cost || 0;
+                dailyCal += item.calories || 0;
+                cellHtml += `
+                    <div class="draggable-meal" onclick="openInlineEdit('${dateStr}', '${slot.key}')">
+                        <span class="tag ${slot.tag}">${slot.label}</span>
+                        <span class="meal-name">${item.name}</span>
+                        <div class="meal-meta">${item.cost.toLocaleString()}원 | ${item.calories}kcal</div>
                     </div>
-                </div>
-            `;
-        } else {
-            content = '<div class="text-gray" style="font-size:0.8rem; padding:10px;">이곳에 메뉴를 드래그 앤 드롭 하세요.</div>';
+                `;
+            } else {
+                 cellHtml += `
+                    <div class="draggable-meal" style="border-style: dashed; background: transparent;" onclick="openInlineEdit('${dateStr}', '${slot.key}')">
+                        <span class="tag ${slot.tag}">${slot.label}</span>
+                        <span class="meal-name" style="color:var(--text-muted); font-weight:normal;">클릭하여 메뉴 추가</span>
+                    </div>
+                `;
+            }
+        });
+
+        if (Object.keys(meal).length > 0) {
+            cellHtml += `<div class="day-summary">
+                            단가: <span>${dailyCost.toLocaleString()}원</span> |
+                            열량: <span>${dailyCal.toLocaleString()}kcal</span>
+                         </div>`;
         }
 
-        slots.innerHTML += `
-            <div class="slot-container" id="slot-${key}" ondrop="drop(event, '${currentEditDate}', '${key}')" ondragover="allowDrop(event)">
-                <span class="slot-title">${labels[key]}</span>
-                ${content}
-            </div>
-        `;
-    });
-}
-
-function renderSearchMenu(query = '') {
-    const container = document.getElementById('search-results');
-    if (!container) return;
-    container.innerHTML = '';
-
-    // Simulate trend API search integration
-    let results = window.appData.menuDB.filter(m =>
-        m.name.includes(query) ||
-        m.type.includes(query) ||
-        (query.toLowerCase() === 'trend' && m.isTrendy)
-    );
-
-    // Limit results for performance if query is empty
-    if (query === '') {
-        results = results.slice(0, 50);
+        cellHtml += `</div>`;
+        html += cellHtml;
     }
 
-    results.forEach(m => {
-        let trendBadge = m.isTrendy ? '<span class="badge-trendy">🔥유행</span>' : '';
-        container.innerHTML += `
-            <div class="draggable-meal" draggable="true" ondragstart="dragNew(event, '${m.id}')">
-                <div style="flex:1;">
-                    <b>${m.name}</b> ${trendBadge} <br>
-                    <span style="font-size:0.7rem; color:var(--text-gray)">(${m.amount}g | ${m.calories}kcal)</span>
-                </div>
-                <div style="display:flex; align-items:center;">
-                    <input type="number" class="cost-input" value="${m.cost}"
-                        onchange="updateMenuCost('${m.id}', this)" onclick="event.stopPropagation();">원
-                </div>
-            </div>
-        `;
-    });
-}
-
-function filterMenuSearch() {
-    let q = document.getElementById('menu-search').value;
-    renderSearchMenu(q);
-}
-
-// Drag & Drop Handlers
-function allowDrop(ev) {
-    ev.preventDefault();
-}
-
-function drag(ev, sourceDate, sourceKey, menuId) {
-    ev.dataTransfer.setData("action", "move");
-    ev.dataTransfer.setData("sourceDate", sourceDate);
-    ev.dataTransfer.setData("sourceKey", sourceKey);
-    ev.dataTransfer.setData("menuId", menuId);
-}
-
-function dragNew(ev, menuId) {
-    ev.dataTransfer.setData("action", "add");
-    ev.dataTransfer.setData("menuId", menuId);
-}
-
-function drop(ev, targetDate, explicitTargetKey = null) {
-    ev.preventDefault();
-    let action = ev.dataTransfer.getData("action");
-    let menuId = ev.dataTransfer.getData("menuId");
-
-    let menuObj = window.appData.menuDB.find(m => m.id === menuId);
-    if(!menuObj) return;
-
-    // Check allergies warning
-    let warning = checkAllergies(menuObj);
-    if(warning) {
-        if(!confirm(`⚠️ [경고] ${warning}\n그래도 추가하시겠습니까?`)) return;
+    let totalCells = firstDay + daysInMonth;
+    let nextMonthDays = (7 - (totalCells % 7)) % 7;
+    for (let i = 1; i <= nextMonthDays; i++) {
+        html += `<div class="day-cell other-month"><div class="date-header">${i}</div></div>`;
     }
 
-    if(!window.appData.mealPlans[targetDate]) {
-        window.appData.mealPlans[targetDate] = {};
-    }
-
-    // Determine category slot
-    let targetKey = explicitTargetKey;
-    if(!targetKey) {
-        let type = menuObj.type;
-        targetKey = type;
-        if(type === 'side2') {
-            if(!window.appData.mealPlans[targetDate].side2_1) targetKey = 'side2_1';
-            else targetKey = 'side2_2';
-        }
-    }
-
-    // Only allow mapping compatible types if an explicit slot is given
-    let typeMap = { 'side2_1': 'side2', 'side2_2': 'side2', 'main1': 'main1', 'rice': 'rice', 'soup': 'soup', 'kimchi': 'kimchi', 'dessert': 'dessert' };
-    if(explicitTargetKey && typeMap[explicitTargetKey] !== menuObj.type) {
-        alert("⚠️ 해당 카테고리 슬롯에 맞지 않는 메뉴입니다.");
-        return;
-    }
-
-    // Apply
-    window.appData.mealPlans[targetDate][targetKey] = menuObj;
-
-    // Remove from source if moved
-    if(action === "move") {
-        let sourceDate = ev.dataTransfer.getData("sourceDate");
-        let sourceKey = ev.dataTransfer.getData("sourceKey");
-        if(sourceDate !== targetDate || sourceKey !== targetKey) {
-             delete window.appData.mealPlans[sourceDate][sourceKey];
-        }
-    }
-
-    // If modal is open, re-render slots, else re-render calendar
-    if(currentEditDate === targetDate) {
-        renderDailySlots();
-    } else {
-        renderCalendar();
-    }
+    calendar.innerHTML += html;
 }
 
-
-// Auto Generate with Strict Anti-Redundancy Rules
+// -----------------------------------------------------
+// Auto Generate Logic (Sidebar settings integration)
+// -----------------------------------------------------
 function autoGenerateMeals() {
     let year = currentMonthDate.getFullYear();
     let month = currentMonthDate.getMonth();
     let totalDays = new Date(year, month + 1, 0).getDate();
 
-    // Track usage to enforce rules by NAME to properly deduplicate generated dataset
-    let monthUsageCount = {}; // { menuName: count }
-    let previousDayNames = new Set();
+    // Read Settings
+    let minCost = parseInt(document.getElementById('setting-cost-min').value) || 0;
+    let maxCost = parseInt(document.getElementById('setting-cost-max').value) || 10000;
+    let kimchiFreq = parseInt(document.getElementById('setting-kimchi-freq').value);
+    let isVeg = document.getElementById('setting-veg').checked;
+    let isHighProtein = document.getElementById('setting-protein').checked;
+    let isPref = document.getElementById('setting-pref').checked;
 
-    // We will track weeks to enforce week-level deduplication
-    // Let's assume week starts on Sunday (0) to Saturday (6).
-    // We track item names used in the current week.
+    let monthUsageCount = {};
+    let previousDayNames = new Set();
     let currentWeekNames = new Set();
+
+    let kimchiCountForWeek = 0;
 
     for (let i = 1; i <= totalDays; i++) {
         let d = new Date(year, month, i);
         let dateStr = `${year}-${String(month+1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
 
         let dayOfWeek = d.getDay();
-        // Reset weekly set if it's Sunday
         if (dayOfWeek === 0) {
             currentWeekNames.clear();
+            kimchiCountForWeek = 0;
         }
 
         let newMeal = {};
         let todayUsedNames = new Set();
+        let currentDailyCost = 0;
 
         const generateSafe = (typeKey, typeCategory) => {
             let available = window.appData.menuDB.filter(m => {
                 if (m.type !== typeCategory) return false;
-                if (todayUsedNames.has(m.name)) return false; // intra-meal duplicate
+                if (todayUsedNames.has(m.name)) return false;
 
-                // Kimchi is exempt from redundancy rules
-                if (typeCategory === 'kimchi') return true;
+                // Filters based on sidebar checkboxes
+                if (isVeg && m.name.match(/고기|소|돼지|닭|오리|생선|참치/)) return false;
+                if (isHighProtein && m.calories < 300 && typeCategory === 'main1') return false;
+                if (isPref && !m.isTrendy && typeCategory === 'main1') return false;
 
-                // Rule 1: Max 2 times per month
+                if (typeCategory === 'kimchi') {
+                    // Logic for kimchi frequency
+                    return (kimchiCountForWeek < kimchiFreq);
+                }
+
                 if ((monthUsageCount[m.name] || 0) >= 2) return false;
-
-                // Rule 2: No consecutive days
                 if (previousDayNames.has(m.name)) return false;
-
-                // Rule 3: No duplicate in the same week
                 if (currentWeekNames.has(m.name)) return false;
 
                 return true;
             });
 
-            // If strictly out of items (rare with 1000+ db), relax week/month constraints slightly
             if (available.length === 0 && typeCategory !== 'kimchi') {
+                 // Relax strict rules if filtered out completely
                  available = window.appData.menuDB.filter(m => m.type === typeCategory && !todayUsedNames.has(m.name) && !previousDayNames.has(m.name));
             }
 
             if (available.length > 0) {
+                // Try to find an item that fits the daily cost budget reasonably.
+                // We'll just pick randomly from the filtered list for simplicity,
+                // but we could try to optimize.
                 let chosen = available[Math.floor(Math.random() * available.length)];
+
                 todayUsedNames.add(chosen.name);
                 monthUsageCount[chosen.name] = (monthUsageCount[chosen.name] || 0) + 1;
                 currentWeekNames.add(chosen.name);
+
+                if (typeCategory === 'kimchi') kimchiCountForWeek++;
+                currentDailyCost += (chosen.cost || 0);
+
                 return chosen;
             }
-            return null; // Should ideally never reach here with huge dataset
+            return null;
         };
 
         newMeal.rice = generateSafe('rice', 'rice');
@@ -357,22 +232,151 @@ function autoGenerateMeals() {
         newMeal.dessert = generateSafe('dessert', 'dessert');
 
         window.appData.mealPlans[dateStr] = newMeal;
-        previousDayNames = new Set(todayUsedNames); // carry forward to next day
+        previousDayNames = new Set(todayUsedNames);
     }
 
     renderCalendar();
-    alert("✨ 이 달의 식단이 엄격한 중복 방지 규칙(월2회 제한, 연속금지, 주간금지)을 준수하여 생성되었습니다.");
+    updateMetrics();
+    alert("✨ 설정된 조건과 중복 방지 규칙을 적용하여 식단이 생성되었습니다.");
 }
 
-// Allergy Checking
-function checkAllergies(menuObj) {
-    let affected = [];
-    window.appData.patientsDB.forEach(p => {
-        let intersection = p.allergies.filter(a => menuObj.ingredients.includes(a));
-        if(intersection.length > 0) {
-            affected.push(`${p.name}님(${intersection.join(',')})`);
-        }
-    });
-    if(affected.length > 0) return `알레르기 주의 환자가 있습니다: ${affected.join(', ')}`;
-    return null;
+
+// -----------------------------------------------------
+// Inline Edit Modal Logic
+// -----------------------------------------------------
+
+function openInlineEdit(dateStr, slotKey) {
+    document.getElementById('edit-date').value = dateStr;
+    document.getElementById('edit-slot-key').value = slotKey;
+
+    let meal = window.appData.mealPlans[dateStr] || {};
+    let item = meal[slotKey];
+
+    const labels = { rice: '밥', soup: '국', main1: '메인', side2_1: '보조', side2_2: '보조', kimchi: '김치', dessert: '후식' };
+    document.getElementById('inline-edit-title').innerText = `${dateStr} - ${labels[slotKey]} 수정`;
+
+    if (item) {
+        document.getElementById('edit-menu-name').value = item.name;
+        document.getElementById('edit-menu-cost').value = item.cost;
+        document.getElementById('edit-menu-cal').value = item.calories;
+        document.getElementById('edit-menu-amount').value = item.amount;
+    } else {
+        document.getElementById('edit-menu-name').value = '';
+        document.getElementById('edit-menu-cost').value = '';
+        document.getElementById('edit-menu-cal').value = '';
+        document.getElementById('edit-menu-amount').value = '';
+    }
+
+    document.getElementById('edit-menu-dropdown').style.display = 'none';
+    document.getElementById('inline-edit-modal').style.display = 'flex';
 }
+
+function closeInlineEdit() {
+    document.getElementById('inline-edit-modal').style.display = 'none';
+}
+
+function searchReplaceMenu() {
+    let q = document.getElementById('edit-menu-name').value.trim();
+    let dropdown = document.getElementById('edit-menu-dropdown');
+
+    if (q.length === 0) {
+        dropdown.style.display = 'none';
+        return;
+    }
+
+    let slotKey = document.getElementById('edit-slot-key').value;
+    let typeMap = { 'side2_1': 'side2', 'side2_2': 'side2', 'main1': 'main1', 'rice': 'rice', 'soup': 'soup', 'kimchi': 'kimchi', 'dessert': 'dessert' };
+    let requiredType = typeMap[slotKey];
+
+    let results = window.appData.menuDB.filter(m =>
+        (m.type === requiredType) && m.name.includes(q)
+    ).slice(0, 10);
+
+    if (results.length > 0) {
+        dropdown.innerHTML = results.map(m => `
+            <div class="dropdown-item" onclick="selectDropdownItem('${m.id}')">
+                <b>${m.name}</b> <span class="text-muted" style="font-size:0.8rem;">(${m.calories}kcal | ${m.cost}원)</span>
+            </div>
+        `).join('');
+        dropdown.style.display = 'block';
+    } else {
+        dropdown.style.display = 'none';
+    }
+}
+
+function selectDropdownItem(id) {
+    let m = window.appData.menuDB.find(x => x.id === id);
+    if(m) {
+        document.getElementById('edit-menu-name').value = m.name;
+        document.getElementById('edit-menu-cost').value = m.cost;
+        document.getElementById('edit-menu-cal').value = m.calories;
+        document.getElementById('edit-menu-amount').value = m.amount;
+    }
+    document.getElementById('edit-menu-dropdown').style.display = 'none';
+}
+
+function saveInlineEdit() {
+    let dateStr = document.getElementById('edit-date').value;
+    let slotKey = document.getElementById('edit-slot-key').value;
+
+    let name = document.getElementById('edit-menu-name').value.trim();
+    let cost = parseInt(document.getElementById('edit-menu-cost').value) || 0;
+    let cal = parseInt(document.getElementById('edit-menu-cal').value) || 0;
+    let amt = parseInt(document.getElementById('edit-menu-amount').value) || 0;
+
+    if(!name) { alert("메뉴 이름을 입력하세요."); return; }
+
+    if(!window.appData.mealPlans[dateStr]) {
+        window.appData.mealPlans[dateStr] = {};
+    }
+
+    // We create or update the object.
+    // If it's a completely new name, we should give it a unique ID or find it in DB.
+    let existingDbItem = window.appData.menuDB.find(m => m.name === name);
+    let typeMap = { 'side2_1': 'side2', 'side2_2': 'side2', 'main1': 'main1', 'rice': 'rice', 'soup': 'soup', 'kimchi': 'kimchi', 'dessert': 'dessert' };
+    let requiredType = typeMap[slotKey];
+
+    if (existingDbItem) {
+        window.appData.mealPlans[dateStr][slotKey] = {
+            id: existingDbItem.id,
+            name: name,
+            type: existingDbItem.type,
+            ingredients: existingDbItem.ingredients,
+            amount: amt,
+            calories: cal,
+            cost: cost,
+            isTrendy: existingDbItem.isTrendy
+        };
+    } else {
+        window.appData.mealPlans[dateStr][slotKey] = {
+            id: `custom_${Date.now()}`,
+            name: name,
+            type: requiredType,
+            ingredients: [],
+            amount: amt,
+            calories: cal,
+            cost: cost,
+            isTrendy: false
+        };
+    }
+
+    closeInlineEdit();
+    renderCalendar();
+    updateMetrics();
+}
+
+function removeMenuFromSlot() {
+    let dateStr = document.getElementById('edit-date').value;
+    let slotKey = document.getElementById('edit-slot-key').value;
+
+    if(window.appData.mealPlans[dateStr] && window.appData.mealPlans[dateStr][slotKey]) {
+        delete window.appData.mealPlans[dateStr][slotKey];
+    }
+
+    closeInlineEdit();
+    renderCalendar();
+    updateMetrics();
+}
+
+// Initial render
+document.addEventListener("DOMContentLoaded", initApp);
