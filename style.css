@@ -372,3 +372,120 @@ body {
     border-bottom: 1px solid var(--border);
 }
 .dropdown-item:hover { background-color: var(--bg-main); }
+
+/* --- Mobile Responsive & Toggle Mode --- */
+/* Standard media query for small screens */
+@media (max-width: 768px) {
+    .app-container {
+        flex-direction: column;
+    }
+    .sidebar-settings {
+        width: 100%;
+        border-right: none;
+        border-bottom: 1px solid var(--border);
+    }
+    .main-content {
+        padding: 16px;
+    }
+    .top-header {
+        flex-direction: column;
+        gap: 16px;
+    }
+    .header-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        width: 100%;
+    }
+    .header-actions button {
+        width: 100%;
+    }
+    .metrics-container {
+        grid-template-columns: 1fr;
+    }
+    .monthly-calendar-grid {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        overflow-x: auto;
+    }
+}
+
+/* Forced Mobile Mode via Toggle */
+body.mobile-mode {
+    max-width: 425px;
+    margin: 0 auto;
+    background-color: var(--border);
+    box-shadow: 0 0 20px rgba(0,0,0,0.1);
+}
+body.mobile-mode .app-container {
+    flex-direction: column;
+    background-color: var(--bg-main);
+    min-height: 100vh;
+}
+body.mobile-mode .sidebar-settings {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    padding: 16px;
+}
+body.mobile-mode .main-content {
+    padding: 16px;
+}
+body.mobile-mode .top-header {
+    flex-direction: column;
+    gap: 12px;
+}
+body.mobile-mode .header-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    width: 100%;
+}
+body.mobile-mode .header-actions button {
+    width: 100%;
+    font-size: 0.8rem;
+    padding: 8px;
+}
+body.mobile-mode .metrics-container {
+    grid-template-columns: 1fr;
+    gap: 12px;
+}
+body.mobile-mode .metric-card {
+    padding: 16px;
+}
+body.mobile-mode .calendar-header-controls {
+    flex-direction: column;
+    gap: 12px;
+}
+/* Responsive Font Adjustments for Calendar in Mobile Mode */
+body.mobile-mode .monthly-calendar-grid {
+    display: grid;
+    /* Force 7 columns but allow horizontal scroll or compress tightly */
+    grid-template-columns: repeat(7, 1fr);
+    overflow-x: auto;
+}
+body.mobile-mode .calendar-day-header {
+    padding: 8px 4px;
+    font-size: 0.75rem;
+}
+body.mobile-mode .day-cell {
+    padding: 4px;
+    min-height: 120px;
+}
+body.mobile-mode .draggable-meal {
+    padding: 4px;
+    font-size: 0.7rem;
+    word-break: keep-all;
+}
+body.mobile-mode .draggable-meal .meal-name {
+    font-size: 0.75rem;
+}
+body.mobile-mode .draggable-meal .meal-meta {
+    font-size: 0.65rem;
+    display: flex;
+    flex-direction: column;
+}
+body.mobile-mode .tag {
+    padding: 2px 4px;
+    font-size: 0.6rem;
+    margin-right: 2px;
+}

@@ -468,5 +468,19 @@ function removeMenuFromSlot() {
     updateMetrics();
 }
 
+// -----------------------------------------------------
+// Mobile Mode Toggle
+// -----------------------------------------------------
+function toggleMobileMode() {
+    const isMobile = document.body.classList.toggle('mobile-mode');
+    const toggleBtn = document.getElementById('toggle-mobile-btn');
+
+    if (isMobile) {
+        toggleBtn.innerText = '💻 PC 보기';
+    } else {
+        toggleBtn.innerText = '📱 모바일 보기';
+    }
+}
+
 // Initial render
 document.addEventListener("DOMContentLoaded", initApp);
