@@ -69,18 +69,25 @@ function renderCalendar() {
 
 function generateMealHTMLMini(date) {
     let meal = window.appData.mealPlans[date];
-    if(!meal || Object.keys(meal).length === 0) return '<div class="text-gray" style="font-size:0.7rem; margin-top:5px;">등록 안됨</div>';
+    if(!meal || Object.keys(meal).length === 0) return '<div class="text-gray" style="font-size:14px; margin-top:5px;">등록 안됨</div>';
 
-    let html = '';
-    const keys = ['main1', 'soup', 'dessert']; // Mini view only shows highlights
+    let html = '<div style="display: flex; flex-direction: column; gap: 3px;">';
+    const keys = ['rice', 'soup', 'main1', 'side2_1', 'side2_2', 'kimchi', 'dessert']; // 7첩 반상 생략 없음
+    const labels = { rice: '밥', soup: '국', main1: '메인', side2_1: '보조', side2_2: '보조', kimchi: '김치', dessert: '후식' };
+    const classes = { rice: 'tag-rice', soup: 'tag-soup', main1: 'tag-main', side2_1: 'tag-side', side2_2: 'tag-side', kimchi: 'tag-kimchi', dessert: 'tag-dessert' };
 
     keys.forEach(key => {
         if(meal[key]) {
-            html += `<div style="font-size:0.7rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">• ${meal[key].name}</div>`;
+            let item = meal[key];
+            let trendBadge = item.isTrendy ? '<span class="badge-trendy">🔥유행</span>' : '';
+            html += `<div style="font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                        <span class="category-tag ${classes[key]}">${labels[key]}</span>${item.name} ${trendBadge}
+                     </div>`;
         }
     });
 
-    html += `<div class="day-summary" style="font-size:0.7rem; margin-top:5px; border-top:1px solid #eee;">${generateSummaryHTML(date)}</div>`;
+    html += '</div>';
+    html += `<div class="day-summary" style="font-size:12px; margin-top:5px; border-top:1px solid #eee; padding-top:5px; color:var(--text-gray);">${generateSummaryHTML(date)}</div>`;
 
     return html;
 }

@@ -64,3 +64,9 @@
 127.0.0.1 - - [01/Mar/2026 08:15:46] "GET /dashboard.js HTTP/1.1" 200 -
 127.0.0.1 - - [01/Mar/2026 08:15:46] "GET /mealPlan.js HTTP/1.1" 200 -
 127.0.0.1 - - [01/Mar/2026 08:15:46] "GET /inventory.js HTTP/1.1" 200 -
+127.0.0.1 - - [01/Mar/2026 08:33:57] "GET /index.html HTTP/1.1" 200 -
+127.0.0.1 - - [01/Mar/2026 08:33:57] "GET /style.css HTTP/1.1" 200 -
+127.0.0.1 - - [01/Mar/2026 08:33:57] "GET /data.js HTTP/1.1" 200 -
+127.0.0.1 - - [01/Mar/2026 08:33:57] "GET /inventory.js HTTP/1.1" 200 -
+127.0.0.1 - - [01/Mar/2026 08:33:57] "GET /dashboard.js HTTP/1.1" 200 -
+127.0.0.1 - - [01/Mar/2026 08:33:57] "GET /mealPlan.js HTTP/1.1" 200 -
