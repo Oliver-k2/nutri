@@ -82,7 +82,7 @@ body {
     gap: 8px;
 }
 .range-inputs input {
-    width: 85px;
+    flex: 1;
     padding: 8px;
     border: 1px solid var(--border);
     border-radius: 6px;
@@ -312,9 +312,14 @@ body {
     padding-top: 8px;
     border-top: 1px dashed var(--border);
     display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.day-summary > span {
+    display: flex;
     justify-content: space-between;
 }
-.day-summary span { font-weight: 600; color: var(--text-main); }
+.day-summary span span { font-weight: 600; color: var(--text-main); }
 
 
 /* Inline Edit Modal */

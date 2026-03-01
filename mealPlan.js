@@ -124,8 +124,8 @@ function renderCalendar() {
 
         if (Object.keys(meal).length > 0) {
             cellHtml += `<div class="day-summary">
-                            단가: <span>${dailyCost.toLocaleString()}원</span> |
-                            열량: <span>${dailyCal.toLocaleString()}kcal</span>
+                            <span>단가: <span>${dailyCost.toLocaleString()}원</span></span>
+                            <span>열량: <span>${dailyCal.toLocaleString()}kcal</span></span>
                          </div>`;
         }
 
@@ -145,6 +145,20 @@ function renderCalendar() {
 // -----------------------------------------------------
 // Auto Generate Logic (Sidebar settings integration)
 // -----------------------------------------------------
+
+function startMealGeneration() {
+    document.getElementById('loading-overlay').style.display = 'flex';
+
+    // Allow UI to update and show loading overlay before starting heavy computation
+    setTimeout(() => {
+        autoGenerateMeals();
+        document.getElementById('loading-overlay').style.display = 'none';
+
+        // Show completion animation/alert
+        alert("✨ 설정된 조건과 중복 방지 규칙을 적용하여 식단이 생성되었습니다.");
+    }, 800);
+}
+
 function autoGenerateMeals() {
     let year = currentMonthDate.getFullYear();
     let month = currentMonthDate.getMonth();
@@ -178,49 +192,70 @@ function autoGenerateMeals() {
         let todayUsedNames = new Set();
         let currentDailyCost = 0;
 
-        const generateSafe = (typeKey, typeCategory) => {
+        const generateSafe = (typeKey, typeCategory, targetCostRemaining, isLastItem) => {
             let available = window.appData.menuDB.filter(m => {
                 if (m.type !== typeCategory) return false;
                 if (todayUsedNames.has(m.name)) return false;
 
                 // Filters based on sidebar checkboxes
-                if (isVeg && m.name.match(/고기|소|돼지|닭|오리|생선|참치/)) return false;
-                if (isHighProtein && m.calories < 300 && typeCategory === 'main1') return false;
-                if (isPref && !m.isTrendy && typeCategory === 'main1') return false;
+                if (isVeg && m.name.match(/고기|소|돼지|닭|오리|생선|참치|새우|오징어|멸치|햄|소시지|베이컨|돈까스|함박|스팸|우삼겹|가츠|카츠|치킨|삼겹|차돌|육|스테이크|고등어|꽁치|연어|장어|갈치|명태|동태|낙지|문어|쭈꾸미|게|조개|홍합|굴|전복|가리비|맛살|크래미|명란|가자미|미트볼|부대|감자탕|해산물|불고기|장조림|제육|순대|곱창|막창|갈비|떡갈비|동파육|탕수육|깐풍기|유린기|꿔바로우|수육|족발|보쌈|닭갈비|찜닭|백숙|삼계탕|추어탕|해장국|만두|사골|곰탕|설렁탕|갈비탕|도가니탕|꼬리곰탕|육개장|우족탕|삼치|팔보채|동그랑땡|어묵/)) return false;
+
+                if (isHighProtein && typeCategory === 'main1') {
+                    // Prioritize high protein items for main1
+                    if (!m.name.match(/고기|소|돼지|닭|오리|생선|계란|콩|두부|연어|고등어|꽁치|치킨|가츠|스테이크/)) return false;
+                }
+
+                if (isPref && typeCategory === 'main1' && !m.isTrendy) {
+                    // For preference filter, randomly exclude 70% of non-trendy items
+                    if (Math.random() < 0.7) return false;
+                }
 
                 if (typeCategory === 'kimchi') {
-                    const isBasic = m.name.includes('배추김치') || m.name.includes('포기김치') || m.name.includes('깍두기');
-                    if (kimchiCountForWeek < kimchiFreq) {
-                        return isBasic;
-                    } else {
-                        // After reaching the basic kimchi frequency, pick non-basic kimchi
-                        return !isBasic;
+                    // Logic for kimchi frequency (regular kimchi vs special kimchi)
+                    let isRegularKimchi = m.name.includes('배추김치') || m.name.includes('포기김치') || m.name.includes('깍두기');
+                    if (isRegularKimchi && kimchiCountForWeek >= kimchiFreq) {
+                        return false;
                     }
                 }
 
-                if ((monthUsageCount[m.name] || 0) >= 2) return false;
-                if (previousDayNames.has(m.name)) return false;
-                if (currentWeekNames.has(m.name)) return false;
+                // Deduplication rules
+                if ((monthUsageCount[m.name] || 0) >= 2 && typeCategory !== 'kimchi') return false;
+                if (previousDayNames.has(m.name) && typeCategory !== 'kimchi') return false;
+                if (currentWeekNames.has(m.name) && typeCategory !== 'kimchi') return false;
 
                 return true;
             });
 
-            if (available.length === 0 && typeCategory !== 'kimchi') {
-                 // Relax strict rules if filtered out completely
-                 available = window.appData.menuDB.filter(m => m.type === typeCategory && !todayUsedNames.has(m.name) && !previousDayNames.has(m.name));
+            // If filtered out completely, relax rules progressively
+            if (available.length === 0) {
+                 available = window.appData.menuDB.filter(m => m.type === typeCategory && !todayUsedNames.has(m.name));
             }
 
             if (available.length > 0) {
                 // Try to find an item that fits the daily cost budget reasonably.
-                // We'll just pick randomly from the filtered list for simplicity,
-                // but we could try to optimize.
-                let chosen = available[Math.floor(Math.random() * available.length)];
+                let candidates = available;
+
+                // If it's the last few items (e.g. dessert or kimchi) and we have a target cost remaining,
+                // try to pick something that brings the total cost closer to the target maxCost.
+                // We want: currentDailyCost + chosen.cost <= maxCost (and ideally >= minCost when finished)
+                if (maxCost > 0) {
+                    let costFiltered = available.filter(m => (currentDailyCost + m.cost) <= maxCost + 500); // Allow slight overflow
+                    if (costFiltered.length > 0) {
+                        candidates = costFiltered;
+                    }
+                }
+
+                let chosen = candidates[Math.floor(Math.random() * candidates.length)];
 
                 todayUsedNames.add(chosen.name);
                 monthUsageCount[chosen.name] = (monthUsageCount[chosen.name] || 0) + 1;
                 currentWeekNames.add(chosen.name);
 
-                if (typeCategory === 'kimchi') kimchiCountForWeek++;
+                let isRegularKimchi = chosen.name.includes('배추김치') || chosen.name.includes('포기김치') || chosen.name.includes('깍두기');
+                if (typeCategory === 'kimchi' && isRegularKimchi) {
+                    kimchiCountForWeek++;
+                }
+
                 currentDailyCost += (chosen.cost || 0);
 
                 return chosen;
@@ -228,13 +263,25 @@ function autoGenerateMeals() {
             return null;
         };
 
-        newMeal.rice = generateSafe('rice', 'rice');
-        newMeal.soup = generateSafe('soup', 'soup');
-        newMeal.main1 = generateSafe('main1', 'main1');
-        newMeal.side2_1 = generateSafe('side2_1', 'side2');
-        newMeal.side2_2 = generateSafe('side2_2', 'side2');
-        newMeal.kimchi = generateSafe('kimchi', 'kimchi');
-        newMeal.dessert = generateSafe('dessert', 'dessert');
+        // Generate in order of impact on cost (Main -> Rice -> Soup -> Sides -> Kimchi -> Dessert)
+        newMeal.main1 = generateSafe('main1', 'main1', 0, false);
+        newMeal.rice = generateSafe('rice', 'rice', 0, false);
+        newMeal.soup = generateSafe('soup', 'soup', 0, false);
+        newMeal.side2_1 = generateSafe('side2_1', 'side2', 0, false);
+        newMeal.side2_2 = generateSafe('side2_2', 'side2', 0, false);
+        newMeal.kimchi = generateSafe('kimchi', 'kimchi', 0, false);
+        newMeal.dessert = generateSafe('dessert', 'dessert', maxCost - currentDailyCost, true);
+
+        // Final cost check & adjustment if severely under minCost
+        if (currentDailyCost < minCost) {
+            // Swap dessert to something more expensive
+            let expensiveDesserts = window.appData.menuDB.filter(m => m.type === 'dessert' && m.cost > (newMeal.dessert ? newMeal.dessert.cost : 0));
+            if (expensiveDesserts.length > 0) {
+                expensiveDesserts.sort((a,b) => b.cost - a.cost);
+                newMeal.dessert = expensiveDesserts[0];
+                currentDailyCost = currentDailyCost - (newMeal.dessert ? newMeal.dessert.cost : 0) + expensiveDesserts[0].cost;
+            }
+        }
 
         window.appData.mealPlans[dateStr] = newMeal;
         previousDayNames = new Set(todayUsedNames);
@@ -242,7 +289,6 @@ function autoGenerateMeals() {
 
     renderCalendar();
     updateMetrics();
-    alert("✨ 설정된 조건과 중복 방지 규칙을 적용하여 식단이 생성되었습니다.");
 }
 
 
