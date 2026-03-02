@@ -17,13 +17,9 @@ async function fetchMenuData() {
         window.appData.menuDB = menuData;
         
         isDataLoaded = true;
-        console.log("✅ 데이터 로딩 완료, 앱 초기화 시작", menuData);
-        
-        // 데이터 로드 후 앱 초기화 (await를 통한 강제 순서 보장)
-        initApp();
+        console.log("✅ 데이터 로딩 완료", menuData);
     } catch (error) {
         console.error("데이터 로딩 중 오류 발생:", error);
-        initApp(); // 실패 시에도 기본 틀은 띄우도록 설정
     }
 }
 
@@ -58,11 +54,14 @@ function parseCSV(csvText) {
     return data;
 }
 
-// 앱 시작 시 데이터 호출 실행
-fetchMenuData();
-
 // Data source assumed available as window.appData
 if (!window.appData) window.appData = { menuDB: [], mealPlans: {} };
+
+// 앱 시작 시 데이터 호출 실행 및 완료 후 초기화 (await 사용)
+(async function initialize() {
+    await fetchMenuData();
+    initApp();
+})();
 
 let currentMonthDate = new Date();
 
@@ -251,8 +250,8 @@ function renderCalendar() {
 
 function startMealGeneration() {
     if (!isDataLoaded) {
-        console.warn("데이터 로딩 중입니다... 잠시만 기다려 주세요.");
-        alert("데이터 로딩 중입니다... 잠시만 기다려 주세요.");
+        console.warn("데이터 로딩 중입니다. 잠시만 기다려 주세요.");
+        alert("데이터 로딩 중입니다. 잠시만 기다려 주세요.");
         return;
     }
     document.getElementById('loading-overlay').style.display = 'flex';
