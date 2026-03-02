@@ -254,7 +254,7 @@ function autoGenerateMeals() {
         const initialMonthUsage = {...monthUsageCount};
         const initialCurrentWeekNames = new Set(currentWeekNames);
 
-        while (attempts < 50) {
+        while (attempts < 500) {
             newMeal = {};
             todayUsedNames = new Set();
             currentDailyCost = 0;
@@ -352,21 +352,66 @@ function autoGenerateMeals() {
                 bestMeal = newMeal;
                 break;
             } else {
-                // Keep track of the closest match in case we fail 50 times
+                // Keep track of the closest match in case we fail max times
                 let diff = 0;
                 if (currentDailyCost < minCost) diff = minCost - currentDailyCost;
                 if (currentDailyCost > maxCost) diff = currentDailyCost - maxCost;
 
                 if (diff < bestCostDiff) {
                     bestCostDiff = diff;
-                    bestMeal = newMeal;
+                    bestMeal = {...newMeal};
                 }
                 attempts++;
             }
         }
 
-        // If we exhausted attempts, use the closest match and update global trackers accordingly
-        if (attempts >= 50 && bestMeal) {
+        // Backtracking / Patching logic if strict constraints failed after 500 attempts
+        if (attempts >= 500 && bestMeal) {
+            let actualCost = Object.values(bestMeal).reduce((sum, item) => sum + (item ? item.cost : 0), 0);
+
+            // Try to force swap an item (like dessert or side dish) to strictly meet the bounds
+            if (actualCost < minCost || actualCost > maxCost) {
+                let diffNeeded = minCost - actualCost; // if negative, we need to reduce cost
+
+                // Prioritize swapping dessert or side2_2
+                const swappableKeys = ['dessert', 'side2_2', 'side2_1', 'soup', 'main1'];
+
+                for (let key of swappableKeys) {
+                    if (actualCost >= minCost && actualCost <= maxCost) break;
+
+                    if (bestMeal[key]) {
+                        let originalItem = bestMeal[key];
+                        let requiredCostOffset = 0;
+                        if (actualCost < minCost) {
+                            requiredCostOffset = minCost - actualCost;
+                        } else if (actualCost > maxCost) {
+                            requiredCostOffset = maxCost - actualCost; // amount to reduce
+                        }
+
+                        let targetItemCost = actualCost < minCost ? originalItem.cost + requiredCostOffset : originalItem.cost - requiredCostOffset;
+
+                        // Find an item of same type that gets us closer to or inside the boundaries
+                        let alternatives = window.appData.menuDB.filter(m => m.type === originalItem.type && m.name !== originalItem.name);
+
+                        // Filter for items that would put us inside the boundary (strict)
+                        let validAlts = alternatives.filter(m => {
+                            let newTotal = actualCost - originalItem.cost + m.cost;
+                            return newTotal >= minCost && newTotal <= maxCost;
+                        });
+
+                        if (validAlts.length > 0) {
+                            // Pick the one that is closest to the middle of the range to be safe
+                            let targetMid = (minCost + maxCost) / 2;
+                            validAlts.sort((a,b) => Math.abs((actualCost - originalItem.cost + a.cost) - targetMid) - Math.abs((actualCost - originalItem.cost + b.cost) - targetMid));
+
+                            bestMeal[key] = validAlts[0];
+                            actualCost = actualCost - originalItem.cost + validAlts[0].cost;
+                        }
+                    }
+                }
+            }
+
+            // After patching, update global trackers accordingly
             currentDailyCost = 0;
             kimchiCountForWeek = initialKimchiCount; // Re-calculate based on bestMeal
             Object.values(bestMeal).forEach(m => {
