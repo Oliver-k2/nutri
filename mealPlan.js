@@ -1,15 +1,12 @@
-// 1. 구글 시트 CSV 링크 (사용자가 나중에 URL을 넣을 수 있게 비워두기)
-const GOOGLE_SHEET_CSV_URL = "여기에_복사한_링크를_붙여넣으세요";
+// 1. 구글 시트 CSV 링크 (영양사도우미님 전용 URL)
+const GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQfie5Y4fmfLy08JljM5kZ2X8--QwptiH1WrXfz1X5PBIFX5nuEsaM52vK0MnAC8zh0HQkVO07Jbilm/pub?output=csv";
 
 // 2. 구글 시트 데이터 호출 함수
 async function fetchMenuData() {
     try {
-        if (GOOGLE_SHEET_CSV_URL === "여기에_복사한_링크를_붙여넣으세요") {
-            console.warn("⚠️ 구글 시트 URL이 설정되지 않았습니다.");
-            initApp();
-            return;
-        }
         const response = await fetch(GOOGLE_SHEET_CSV_URL);
+        if (!response.ok) throw new Error("데이터를 가져오는데 실패했습니다.");
+        
         const csvText = await response.text();
         const menuData = parseCSV(csvText);
         
@@ -17,41 +14,48 @@ async function fetchMenuData() {
         if (!window.appData) window.appData = { menuDB: [], mealPlans: {} };
         window.appData.menuDB = menuData;
         
-        console.log("✅ 데이터 불러오기 성공!", menuData);
+        console.log("✅ 데이터 로딩 완료, 앱 초기화 시작", menuData);
         
-        // 데이터 로드 후 앱 초기화
+        // 데이터 로드 후 앱 초기화 (await를 통한 강제 순서 보장)
         initApp();
     } catch (error) {
-        console.error("데이터를 불러오는데 실패했습니다:", error);
-        initApp();
+        console.error("데이터 로딩 중 오류 발생:", error);
+        initApp(); // 실패 시에도 기본 틀은 띄우도록 설정
     }
 }
 
-// 3. CSV 데이터 파싱 함수 (12개 표준 항목 준수)
+// 3. CSV 데이터 파싱 함수 (영양사도우미 데이터 표준 12개 항목 준수)
 function parseCSV(csvText) {
     const rows = csvText.split('\n');
     const data = [];
     for (let i = 1; i < rows.length; i++) {
-        if (!rows[i].trim()) continue;
-        const cols = rows[i].split(',');
+        const line = rows[i].trim();
+        if (!line) continue;
+        
+        const cols = line.split(',');
         data.push({
-            name: cols[0].trim(),
-            type: cols[1].trim(), // 구분 -> type 매핑
-            cost: Number(cols[2]) || 0, // 가격 -> cost 매핑
-            season: cols[3].trim(),
-            amount: Number(cols[4]) || 0, // 1회제공량 -> amount 매핑
-            isHot: cols[5].trim(),
-            calories: Number(cols[6]) || 0, // Kcal -> calories 매핑
-            carbs: Number(cols[7]) || 0,
-            protein: Number(cols[8]) || 0,
-            fat: Number(cols[9]) || 0,
-            id: cols[10].trim(), // 중복방지태그 -> id 매핑
-            allergy: cols[11].trim()
+            name: cols[0]?.trim(),     // 메뉴명
+            category: cols[1]?.trim(), // 구분 -> category 매핑
+            type: cols[1]?.trim(),     // 기존 로직 호환용 (type)
+            price: Number(cols[2]),    // 가격 -> price 매핑
+            cost: Number(cols[2]),     // 기존 로직 호환용 (cost)
+            season: cols[3]?.trim(),   // 제철
+            amount: Number(cols[4]),   // 1회제공량
+            isHot: cols[5]?.trim(),    // HOT여부
+            kcal: Number(cols[6]),     // Kcal
+            calories: Number(cols[6]), // 기존 로직 호환용 (calories)
+            carbs: Number(cols[7]),    // 탄수화물
+            protein: Number(cols[8]),  // 단백질
+            fat: Number(cols[9]),      // 지방
+            tag: cols[10]?.trim(),     // 중복방지태그 -> tag 매핑
+            id: cols[10]?.trim(),      // 기존 로직 호환용 (id)
+            allergy: cols[11]?.trim()  // 알러지번호
         });
     }
     return data;
 }
 
+// 앱 시작 시 데이터 호출 실행
 fetchMenuData();
 
 // Data source assumed available as window.appData
