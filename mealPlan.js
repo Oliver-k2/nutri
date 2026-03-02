@@ -1,6 +1,8 @@
 // 1. 구글 시트 CSV 링크 (영양사도우미님 전용 URL)
 const GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQfie5Y4fmfLy08JljM5kZ2X8--QwptiH1WrXfz1X5PBIFX5nuEsaM52vK0MnAC8zh0HQkVO07Jbilm/pub?output=csv";
 
+let isDataLoaded = false;
+
 // 2. 구글 시트 데이터 호출 함수
 async function fetchMenuData() {
     try {
@@ -14,6 +16,7 @@ async function fetchMenuData() {
         if (!window.appData) window.appData = { menuDB: [], mealPlans: {} };
         window.appData.menuDB = menuData;
         
+        isDataLoaded = true;
         console.log("✅ 데이터 로딩 완료, 앱 초기화 시작", menuData);
         
         // 데이터 로드 후 앱 초기화 (await를 통한 강제 순서 보장)
@@ -247,6 +250,11 @@ function renderCalendar() {
 // -----------------------------------------------------
 
 function startMealGeneration() {
+    if (!isDataLoaded) {
+        console.warn("데이터 로딩 중입니다... 잠시만 기다려 주세요.");
+        alert("데이터 로딩 중입니다... 잠시만 기다려 주세요.");
+        return;
+    }
     document.getElementById('loading-overlay').style.display = 'flex';
 
     // Allow UI to update and show loading overlay before starting heavy computation
