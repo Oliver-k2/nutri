@@ -1,4 +1,4 @@
-// 1. 구글 시트 CSV 링크 (영양사도우미님 전용 URL)
+// 1. 구글 시트 CSV 링크 (영양사도우미님 전용 URL) - Updated 2026-03-02
 const GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQfie5Y4fmfLy08JljM5kZ2X8--QwptiH1WrXfz1X5PBIFX5nuEsaM52vK0MnAC8zh0HQkVO07Jbilm/pub?output=csv";
 
 let isDataLoaded = false;
