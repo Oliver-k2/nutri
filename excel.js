@@ -3,9 +3,9 @@
 function downloadTemplate() {
     // Defines the headers and a sample row for the CSV/Excel template
     const templateData = [
-        ["메뉴명", "카테고리(rice/soup/main1/side2/kimchi/dessert)", "제공량(g)", "칼로리(kcal)", "단가(원)", "트렌디(O/X)"],
-        ["마라로제찜닭", "main1", "150", "450", "3500", "O"],
-        ["현미밥", "rice", "200", "300", "500", "X"]
+        ["메뉴명", "구분", "가격(원)", "제철(월)", "1회제공량(g)", "HOT여부(Y/N)", "Kcal", "탄수화물(g)", "단백질(g)", "지방(g)", "중복방지태그", "알러지번호"],
+        ["마라로제찜닭", "main1", "3500", "", "250", "Y", "450", "25", "35", "20", "마라로제찜닭", ""],
+        ["현미밥", "rice", "510", "", "200", "N", "280", "65", "6", "2", "현미밥", ""]
     ];
 
     const ws = XLSX.utils.aoa_to_sheet(templateData);
@@ -33,6 +33,22 @@ function handleFileUpload(event) {
 
         // Process rows (skip header)
         if (json.length > 1) {
+            let header = json[0];
+            const expectedHeader = ["메뉴명", "구분", "가격(원)", "제철(월)", "1회제공량(g)", "HOT여부(Y/N)", "Kcal", "탄수화물(g)", "단백질(g)", "지방(g)", "중복방지태그", "알러지번호"];
+
+            let isValidSchema = true;
+            for (let i = 0; i < expectedHeader.length; i++) {
+                if (header[i] !== expectedHeader[i]) {
+                    isValidSchema = false;
+                    break;
+                }
+            }
+
+            if (!isValidSchema) {
+                alert("⚠️ 표준 양식(12개 항목)을 준수해 주세요.");
+                return;
+            }
+
             let addedCount = 0;
             for (let i = 1; i < json.length; i++) {
                 let row = json[i];
@@ -40,10 +56,16 @@ function handleFileUpload(event) {
 
                 let name = row[0];
                 let type = row[1] ? row[1].trim().toLowerCase() : "side2"; // Default fallback
-                let amount = row[2] ? parseInt(row[2]) : 100;
-                let calories = row[3] ? parseInt(row[3]) : 200;
-                let cost = row[4] ? parseInt(row[4]) : 1000;
-                let isTrendy = row[5] && row[5].toString().trim().toUpperCase() === "O";
+                let cost = row[2] ? parseInt(row[2]) : 1000;
+                // row[3] is seasonality (ignored in DB model for now)
+                let amount = row[4] ? parseInt(row[4]) : 100;
+                let isTrendy = row[5] && row[5].toString().trim().toUpperCase() === "Y";
+                let calories = row[6] ? parseInt(row[6]) : 200;
+                let carbs = row[7] ? parseInt(row[7]) : Math.floor(calories * 0.1);
+                let protein = row[8] ? parseInt(row[8]) : Math.floor(calories * 0.05);
+                let fat = row[9] ? parseInt(row[9]) : Math.floor(calories * 0.02);
+                // row[10] is dedup tag (can be name)
+                // row[11] is allergy (ignored for now)
 
                 // Add to DB
                 let newItem = {
@@ -52,9 +74,9 @@ function handleFileUpload(event) {
                     type: type,
                     amount: amount,
                     calories: calories,
-                    carbs: Math.floor(calories * 0.1), // Mock macros
-                    protein: Math.floor(calories * 0.05),
-                    fat: Math.floor(calories * 0.02),
+                    carbs: carbs,
+                    protein: protein,
+                    fat: fat,
                     cost: cost,
                     ingredients: [],
                     isTrendy: isTrendy
