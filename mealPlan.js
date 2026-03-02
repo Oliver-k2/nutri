@@ -1,4 +1,61 @@
+// 1. 구글 시트 CSV 링크 (사용자가 나중에 URL을 넣을 수 있게 비워두기)
+const GOOGLE_SHEET_CSV_URL = "여기에_복사한_링크를_붙여넣으세요";
+
+// 2. 구글 시트 데이터 호출 함수
+async function fetchMenuData() {
+    try {
+        if (GOOGLE_SHEET_CSV_URL === "여기에_복사한_링크를_붙여넣으세요") {
+            console.warn("⚠️ 구글 시트 URL이 설정되지 않았습니다.");
+            initApp();
+            return;
+        }
+        const response = await fetch(GOOGLE_SHEET_CSV_URL);
+        const csvText = await response.text();
+        const menuData = parseCSV(csvText);
+        
+        // window.appData 초기화 및 데이터 매핑
+        if (!window.appData) window.appData = { menuDB: [], mealPlans: {} };
+        window.appData.menuDB = menuData;
+        
+        console.log("✅ 데이터 불러오기 성공!", menuData);
+        
+        // 데이터 로드 후 앱 초기화
+        initApp();
+    } catch (error) {
+        console.error("데이터를 불러오는데 실패했습니다:", error);
+        initApp();
+    }
+}
+
+// 3. CSV 데이터 파싱 함수 (12개 표준 항목 준수)
+function parseCSV(csvText) {
+    const rows = csvText.split('\n');
+    const data = [];
+    for (let i = 1; i < rows.length; i++) {
+        if (!rows[i].trim()) continue;
+        const cols = rows[i].split(',');
+        data.push({
+            name: cols[0].trim(),
+            type: cols[1].trim(), // 구분 -> type 매핑
+            cost: Number(cols[2]) || 0, // 가격 -> cost 매핑
+            season: cols[3].trim(),
+            amount: Number(cols[4]) || 0, // 1회제공량 -> amount 매핑
+            isHot: cols[5].trim(),
+            calories: Number(cols[6]) || 0, // Kcal -> calories 매핑
+            carbs: Number(cols[7]) || 0,
+            protein: Number(cols[8]) || 0,
+            fat: Number(cols[9]) || 0,
+            id: cols[10].trim(), // 중복방지태그 -> id 매핑
+            allergy: cols[11].trim()
+        });
+    }
+    return data;
+}
+
+fetchMenuData();
+
 // Data source assumed available as window.appData
+if (!window.appData) window.appData = { menuDB: [], mealPlans: {} };
 
 let currentMonthDate = new Date();
 
@@ -545,4 +602,4 @@ function toggleMobileMode() {
 }
 
 // Initial render
-document.addEventListener("DOMContentLoaded", initApp);
+// document.addEventListener("DOMContentLoaded", initApp); // fetchMenuData handles this now
