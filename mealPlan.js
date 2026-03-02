@@ -140,7 +140,7 @@ function renderCalendar() {
                 dailyCost += item.cost || 0;
                 dailyCal += item.calories || 0;
                 let hotTagHtml = '';
-                if (item.name.match(/마라|로제|두쫀쿠|봄동비빔밥|두바이/)) {
+                if (item.isTrendy || item.name.match(/마라|로제|두쫀쿠|봄동비빔밥|두바이/)) {
                     hotTagHtml = `<span class="tag tag-hot">HOT 🔥</span>`;
                 }
 
